@@ -7,6 +7,7 @@ import {IERC3156FlashLender} from "@openzeppelin/contracts/interfaces/IERC3156Fl
 import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SimpleGovernance} from "./SimpleGovernance.sol";
+import "forge-std/console.sol";
 
 contract SelfiePool is IERC3156FlashLender, ReentrancyGuard {
     bytes32 private constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
@@ -60,18 +61,23 @@ contract SelfiePool is IERC3156FlashLender, ReentrancyGuard {
         if (_receiver.onFlashLoan(msg.sender, _token, _amount, 0, _data) != CALLBACK_SUCCESS) {
             revert CallbackFailed();
         }
-
         if (!token.transferFrom(address(_receiver), address(this), _amount)) {
             revert RepayFailed();
         }
+       
 
         return true;
     }
 
     function emergencyExit(address receiver) external onlyGovernance {
         uint256 amount = token.balanceOf(address(this));
+        console.log("emergencyExit amount", amount);
         token.transfer(receiver, amount);
-
+        console.log("emergencyExit to", receiver);
+        console.log("emergencyExit from", address(this));
+        console.log("emergencyExit balance", token.balanceOf(address(this)));
+        console.log("emergencyExit receiver balance", token.balanceOf(receiver));
+        
         emit EmergencyExit(receiver, amount);
     }
 }

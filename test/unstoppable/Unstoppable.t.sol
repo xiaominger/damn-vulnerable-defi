@@ -91,6 +91,9 @@ contract UnstoppableChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_unstoppable() public checkSolvedByPlayer {
+    
+        token.transfer( address(vault),1);
+        
         
     }
 
@@ -109,3 +112,4 @@ contract UnstoppableChallenge is Test {
         assertEq(vault.owner(), deployer, "Vault did not change owner");
     }
 }
+

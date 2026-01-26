@@ -12,3 +12,5 @@ docs/
 
 # Dotenv file
 .env
+.env.sample
+test/compromised/node_modules

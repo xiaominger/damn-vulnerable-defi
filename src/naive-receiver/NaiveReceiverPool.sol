@@ -7,6 +7,8 @@ import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156
 import {FlashLoanReceiver} from "./FlashLoanReceiver.sol";
 import {Multicall} from "./Multicall.sol";
 import {WETH} from "solmate/tokens/WETH.sol";
+import "forge-std/console.sol";
+
 
 contract NaiveReceiverPool is Multicall, IERC3156FlashLender {
     uint256 private constant FIXED_FEE = 1e18; // not the cheapest flash loan
@@ -64,6 +66,25 @@ contract NaiveReceiverPool is Multicall, IERC3156FlashLender {
     }
 
     function withdraw(uint256 amount, address payable receiver) external {
+         // diagnostic logs
+        console.log("=== NaiveReceiverPool.withdraw called ===");
+        console.log("msg.sender:", msg.sender);
+        console.log("tx.origin:", tx.origin);
+        console.log("msg.data.length:", msg.data.length);
+        // recover spoofed sender if EIP-2771 style
+        address spoofed = msg.sender == trustedForwarder && msg.data.length >= 20
+            ? address(bytes20(msg.data[msg.data.length - 20:]))
+            : msg.sender;
+        console.log("effective sender (spoofed or msg.sender):", spoofed);
+        console.log("withdraw params -> amount:", amount);
+        console.log("withdraw params -> to:", receiver);
+        console.log("deposits[effectiveSender]:", deposits[spoofed]);
+      
+
+        // before arithmetic that later underflows, print check
+        if (deposits[spoofed] < amount) {
+            console.log("WARNING: deposits < amount; this will revert on subtract");
+        }
         // Reduce deposits
         deposits[_msgSender()] -= amount;
         totalDeposits -= amount;

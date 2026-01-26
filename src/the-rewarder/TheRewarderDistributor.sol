@@ -8,6 +8,9 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
+
+import {Test, console} from "forge-std/Test.sol";
+
 struct Distribution {
     uint256 remaining;
     uint256 nextBatchNumber;
@@ -79,6 +82,7 @@ contract TheRewarderDistributor {
 
     // Allow claiming rewards of multiple tokens in a single transaction
     function claimRewards(Claim[] memory inputClaims, IERC20[] memory inputTokens) external {
+        console.log(" msg.sender:", msg.sender);
         Claim memory inputClaim;
         IERC20 token;
         uint256 bitsSet; // accumulator
@@ -107,7 +111,7 @@ contract TheRewarderDistributor {
             if (i == inputClaims.length - 1) {
                 if (!_setClaimed(token, amount, wordPosition, bitsSet)) revert AlreadyClaimed();
             }
-
+           
             bytes32 leaf = keccak256(abi.encodePacked(msg.sender, inputClaim.amount));
             bytes32 root = distributions[token].roots[inputClaim.batchNumber];
 

