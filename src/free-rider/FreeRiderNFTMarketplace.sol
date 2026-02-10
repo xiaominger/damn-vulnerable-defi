@@ -5,7 +5,8 @@ pragma solidity =0.8.25;
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {DamnValuableNFT} from "../DamnValuableNFT.sol";
-
+import {console} from "forge-std/console.sol";
+import {SimpleFlashSwap} from "../../test/free-rider/SimpleFlashSwap.sol";
 contract FreeRiderNFTMarketplace is ReentrancyGuard {
     using Address for address payable;
 
@@ -102,11 +103,12 @@ contract FreeRiderNFTMarketplace is ReentrancyGuard {
 
         // transfer from seller to buyer
         DamnValuableNFT _token = token; // cache for gas savings
+        console.log("ownerOf", tokenId, _token.ownerOf(tokenId));
         _token.safeTransferFrom(_token.ownerOf(tokenId), msg.sender, tokenId);
-
+        console.log("again ownerOf", tokenId, _token.ownerOf(tokenId));
         // pay seller using cached token
         payable(_token.ownerOf(tokenId)).sendValue(priceToPay);
-
+       
         emit NFTBought(msg.sender, tokenId, priceToPay);
     }
 
