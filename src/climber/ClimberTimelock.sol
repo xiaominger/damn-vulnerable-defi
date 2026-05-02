@@ -14,6 +14,7 @@ import {
     CallerNotTimelock,
     NewDelayAboveMax
 } from "./ClimberErrors.sol";
+import "forge-std/console.sol";
 
 /**
  * @title ClimberTimelock
@@ -91,6 +92,8 @@ contract ClimberTimelock is ClimberTimelockBase {
             targets[i].functionCallWithValue(dataElements[i], values[i]);
         }
 
+         OperationState operationState =  getOperationState(id);
+         console.log("Operation state after execution:", uint(operationState));
         if (getOperationState(id) != OperationState.ReadyForExecution) {
             revert NotReadyForExecution(id);
         }

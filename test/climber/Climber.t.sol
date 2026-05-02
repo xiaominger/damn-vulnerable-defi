@@ -7,6 +7,10 @@ import {ClimberVault} from "../../src/climber/ClimberVault.sol";
 import {ClimberTimelock, CallerNotTimelock, PROPOSER_ROLE, ADMIN_ROLE} from "../../src/climber/ClimberTimelock.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {MaliciousVault} from "./MaliciousVault.sol";
+import "./ClimberAttacker.sol";
+
 
 contract ClimberChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -18,6 +22,10 @@ contract ClimberChallenge is Test {
     uint256 constant VAULT_TOKEN_BALANCE = 10_000_000e18;
     uint256 constant PLAYER_INITIAL_ETH_BALANCE = 0.1 ether;
     uint256 constant TIMELOCK_DELAY = 60 * 60;
+    bytes32 constant salt = bytes32("SALT");
+    MaliciousVault maliciousVault = new MaliciousVault();
+
+     // 预部署恶意合约实现
 
     ClimberVault vault;
     ClimberTimelock timelock;
@@ -86,6 +94,9 @@ contract ClimberChallenge is Test {
      */
     function test_climber() public checkSolvedByPlayer {
         
+        ClimberAttacker attacker = new ClimberAttacker(timelock, vault, token, recovery, address(maliciousVault));
+        
+        attacker.attack();
     }
 
     /**

